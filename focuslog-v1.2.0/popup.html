@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FocusLog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #151820;
+      --border: #1e2330;
+      --accent: #00e5ff;
+      --red: #ff4757;
+      --orange: #ffa502;
+      --green: #2ed573;
+      --purple: #a29bfe;
+      --text: #e8eaf0;
+      --muted: #555c72;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 380px;
+      min-height: 460px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* Header */
+    header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo { display: flex; align-items: center; gap: 8px; }
+    .logo-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; box-shadow: 0 0 8px var(--accent); }
+      50% { opacity:.4; box-shadow: 0 0 2px var(--accent); }
+    }
+    .logo-text { font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .sync-badge {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px; color: var(--muted);
+      border: 1px solid var(--border); border-radius: 3px;
+      padding: 2px 6px; letter-spacing: .05em;
+    }
+    .sync-badge.on { color: var(--green); border-color: rgba(46,213,115,.3); }
+
+    /* Tabs */
+    .tabs {
+      display: flex; border-bottom: 1px solid var(--border);
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      flex: 1; min-width: 0; padding: 8px 4px;
+      background: none; border: none; color: var(--muted);
+      font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase; cursor: pointer;
+      white-space: nowrap; position: relative; transition: color .2s;
+    }
+    .tab-btn.active { color: var(--accent); }
+    .tab-btn.active::after {
+      content: ''; position: absolute; bottom: -1px; left: 15%; right: 15%;
+      height: 2px; background: var(--accent); box-shadow: 0 0 6px var(--accent);
+    }
+
+    /* Panels */
+    .panel { display: none; padding: 12px 14px; max-height: 380px; overflow-y: auto; }
+    .panel.active { display: block; }
+    .panel::-webkit-scrollbar { width: 3px; }
+    .panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* Summary bar */
+    .summary-bar {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px 14px; margin-bottom: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .summary-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+    .summary-value { font-family: 'Share Tech Mono', monospace; font-size: 20px; color: var(--accent); text-shadow: 0 0 10px rgba(0,229,255,.4); }
+    .summary-count { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--muted); }
+
+    /* Site rows */
+    .site-list { display: flex; flex-direction: column; gap: 5px; }
+    .site-row {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 10px;
+      display: flex; align-items: center; gap: 8px;
+      animation: slideIn .2s ease both;
+    }
+    @keyframes slideIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+    .site-rank { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); width: 14px; flex-shrink: 0; }
+    .site-info { flex: 1; min-width: 0; }
+    .site-name { font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .site-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+    .site-bar { height: 100%; border-radius: 2px; }
+    .site-meta { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .site-time { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--muted); }
+    .goal-pip {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--orange); box-shadow: 0 0 4px var(--orange);
+      flex-shrink: 0;
+    }
+    .goal-pip.over { background: var(--red); box-shadow: 0 0 4px var(--red); }
+    .goal-pip.ok { background: var(--green); box-shadow: 0 0 4px var(--green); }
+
+    /* Hour chart */
+    .hour-chart {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; padding: 12px; margin-bottom: 10px;
+    }
+    .hour-chart-title {
+      font-size: 10px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: .1em; margin-bottom: 10px;
+    }
+    .hour-bars {
+      display: flex; align-items: flex-end; gap: 2px; height: 60px;
+    }
+    .hour-col {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; gap: 3px; height: 100%; justify-content: flex-end;
+    }
+    .hour-bar {
+      width: 100%; border-radius: 2px 2px 0 0;
+      min-height: 2px; transition: height .4s ease;
+    }
+    .hour-label {
+      font-family: 'Share Tech Mono', monospace; font-size: 7px;
+      color: var(--muted); writing-mode: vertical-rl;
+      text-orientation: mixed; transform: rotate(180deg);
+    }
+    .hour-col.peak .hour-bar { box-shadow: 0 0 6px currentColor; }
+
+    /* Week grid */
+    .week-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      gap: 4px; margin-bottom: 10px;
+    }
+    .day-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .day-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .day-bar-wrap {
+      width: 100%; height: 44px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 4px;
+      display: flex; align-items: flex-end; overflow: hidden;
+    }
+    .day-bar { width: 100%; border-radius: 3px 3px 0 0; min-height: 2px; }
+    .day-total { font-family: 'Share Tech Mono', monospace; font-size: 8px; color: var(--muted); }
+    .day-cell.today .day-label { color: var(--accent); }
+    .day-cell.today .day-bar-wrap { border-color: rgba(0,229,255,.4); }
+
+    /* Focus Mode */
+    .focus-status {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px; margin-bottom: 10px; text-align: center;
+    }
+    .focus-status.active { border-color: rgba(0,229,255,.4); background: rgba(0,229,255,.04); }
+    .focus-status.active .focus-icon { color: var(--accent); }
+    .focus-icon { font-size: 24px; margin-bottom: 6px; display: block; }
+    .focus-timer {
+      font-family: 'Share Tech Mono', monospace; font-size: 28px;
+      color: var(--accent); text-shadow: 0 0 15px rgba(0,229,255,.4);
+      margin: 4px 0;
+    }
+    .focus-sub { font-size: 10px; color: var(--muted); }
+    .focus-progress { height: 3px; background: var(--border); border-radius: 2px; margin: 10px 0 0; overflow: hidden; }
+    .focus-progress-fill { height: 100%; background: var(--accent); border-radius: 2px; box-shadow: 0 0 6px var(--accent); transition: width 1s linear; }
+
+    .section-label {
+      font-size: 10px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: .1em; margin: 12px 0 6px;
+    }
+
+    /* Input row */
+    .input-row { display: flex; gap: 6px; margin-bottom: 8px; }
+    .fi {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 5px; padding: 7px 10px; color: var(--text);
+      font-family: 'Share Tech Mono', monospace; font-size: 11px; outline: none;
+      transition: border-color .2s;
+    }
+    .fi:focus { border-color: var(--accent); }
+    .fi::placeholder { color: var(--muted); }
+    .fi.small { width: 70px; flex: none; }
+
+    .btn {
+      background: var(--accent); border: none; border-radius: 5px;
+      padding: 7px 12px; color: #000; font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 11px; cursor: pointer; transition: opacity .2s;
+      white-space: nowrap;
+    }
+    .btn:hover { opacity: .8; }
+    .btn.red { background: var(--red); color: #fff; }
+    .btn.ghost {
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    }
+    .btn.ghost:hover { border-color: var(--muted); color: var(--text); }
+    .btn.full { width: 100%; margin-top: 6px; }
+
+    /* Tag list */
+    .tag-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+    .tag {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; padding: 3px 8px;
+      font-family: 'Share Tech Mono', monospace; font-size: 10px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .tag .rm { background:none; border:none; color:var(--muted); cursor:pointer; font-size:12px; padding:0; transition:color .2s; }
+    .tag .rm:hover { color: var(--red); }
+
+    /* Goals list */
+    .goals-list { display: flex; flex-direction: column; gap: 5px; }
+    .goal-row {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 5px; padding: 8px 10px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .goal-domain { font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--accent); }
+    .goal-limit { font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--muted); }
+
+    /* Settings */
+    .setting-row {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px 12px; margin-bottom: 8px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .setting-info .setting-title { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+    .setting-info .setting-desc { font-size: 10px; color: var(--muted); line-height: 1.4; }
+
+    /* Toggle */
+    .toggle { position:relative; width:36px; height:20px; flex-shrink:0; }
+    .toggle input { opacity:0; width:0; height:0; }
+    .toggle-slider {
+      position:absolute; inset:0; background:var(--border);
+      border-radius:20px; cursor:pointer; transition:background .2s;
+    }
+    .toggle-slider::before {
+      content:''; position:absolute; width:14px; height:14px;
+      left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .2s;
+    }
+    .toggle input:checked + .toggle-slider { background:var(--accent); }
+    .toggle input:checked + .toggle-slider::before { transform:translateX(16px); }
+
+    /* Reset */
+    .danger-btn {
+      width:100%; margin-top:8px; padding:8px; background:none;
+      border:1px solid var(--border); border-radius:5px; color:var(--muted);
+      font-family:'Syne',sans-serif; font-size:10px; font-weight:700;
+      letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:all .2s;
+    }
+    .danger-btn:hover { border-color:var(--red); color:var(--red); }
+
+    /* Empty */
+    .empty { text-align:center; padding:24px 0; color:var(--muted); font-size:12px; line-height:1.8; }
+    .empty-icon { font-size:26px; margin-bottom:6px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    <span class="logo-text">FocusLog</span>
+  </div>
+  <div class="header-right">
+    <span class="sync-badge" id="syncBadge">LOCAL</span>
+    <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted)" id="dateDisplay"></span>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-panel="today">Today</button>
+  <button class="tab-btn" data-panel="week">Week</button>
+  <button class="tab-btn" data-panel="focus">Focus</button>
+  <button class="tab-btn" data-panel="goals">Goals</button>
+  <button class="tab-btn" data-panel="settings">Settings</button>
+</div>
+
+<!-- TODAY -->
+<div class="panel active" id="panel-today">
+  <div class="summary-bar">
+    <div>
+      <div class="summary-label">Total Today</div>
+      <div class="summary-value" id="totalToday">0:00</div>
+    </div>
+    <div class="summary-count" id="siteCount">0 sites</div>
+  </div>
+  <div class="site-list" id="siteList"></div>
+  <button class="danger-btn" id="resetToday">⚠ Clear Today's Data</button>
+</div>
+
+<!-- WEEK -->
+<div class="panel" id="panel-week">
+  <div class="week-grid" id="weekGrid"></div>
+
+  <div class="hour-chart">
+    <div class="hour-chart-title">Peak Hours (7-day avg)</div>
+    <div class="hour-bars" id="hourBars"></div>
+  </div>
+
+  <div class="site-list" id="weekSiteList"></div>
+</div>
+
+<!-- FOCUS -->
+<div class="panel" id="panel-focus">
+  <div class="focus-status" id="focusStatus">
+    <span class="focus-icon">🎯</span>
+    <div style="font-size:13px;font-weight:700;margin-bottom:4px" id="focusTitle">Focus Mode Off</div>
+    <div class="focus-sub" id="focusSub">Block distracting sites for a set time</div>
+  </div>
+
+  <div id="focusControls">
+    <div class="section-label">Sites to block</div>
+    <div class="input-row">
+      <input class="fi" id="focusDomainInput" placeholder="youtube.com" type="text"/>
+      <button class="btn" id="addFocusDomain">ADD</button>
+    </div>
+    <div class="tag-list" id="focusDomainTags"></div>
+
+    <div class="section-label">Duration</div>
+    <div class="input-row">
+      <input class="fi small" id="focusDuration" type="number" min="1" max="480" value="25" placeholder="25"/>
+      <span style="line-height:32px;font-size:12px;color:var(--muted)">minutes</span>
+    </div>
+
+    <button class="btn full" id="startFocusBtn">▶ Start Focus Session</button>
+
+    <!-- Hard Mode toggle -->
+    <div style="margin-top:10px;background:rgba(255,71,87,0.06);border:1px solid rgba(255,71,87,0.25);border-radius:6px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#ff4757;margin-bottom:2px">🔒 Hard Mode</div>
+        <div style="font-size:10px;color:var(--muted);line-height:1.4">Cannot end session early. Requires confirmation.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="hardModeToggle"/>
+        <span class="toggle-slider" style=""></span>
+      </label>
+    </div>
+  </div>
+
+  <div id="focusActiveControls" style="display:none">
+    <div class="focus-timer" id="focusTimerDisplay">--:--</div>
+    <div class="focus-progress"><div class="focus-progress-fill" id="focusProgressFill" style="width:0%"></div></div>
+    <div class="focus-sub" style="margin-top:6px" id="focusBlockedList"></div>
+    <div id="hardModeBadge" style="display:none;margin-top:10px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.3);border-radius:5px;padding:7px 10px;font-size:10px;color:#ff4757;text-align:center;letter-spacing:.05em">
+      🔒 HARD MODE — Session cannot be ended early
+    </div>
+    <button class="btn red full" id="stopFocusBtn" style="margin-top:12px">■ End Session Early</button>
+  </div>
+</div>
+
+<!-- GOALS -->
+<div class="panel" id="panel-goals">
+  <p style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6">
+    Set a daily time limit per site. You'll get a notification when you hit it.
+  </p>
+  <div class="input-row">
+    <input class="fi" id="goalDomain" placeholder="youtube.com" type="text"/>
+    <input class="fi small" id="goalMins" type="number" min="1" placeholder="30" style="width:60px"/>
+    <button class="btn" id="addGoalBtn">SET</button>
+  </div>
+  <div class="goals-list" id="goalsList"></div>
+
+  <div class="section-label" style="margin-top:14px">Watchlist</div>
+  <p style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5">
+    Sites here show in red on Today tab and trigger alerts at 30m / 1h / 2h.
+  </p>
+  <div class="input-row">
+    <input class="fi" id="watchInput" placeholder="reddit.com" type="text"/>
+    <button class="btn" id="addWatchBtn">ADD</button>
+  </div>
+  <div class="tag-list" id="watchTags"></div>
+</div>
+
+<!-- SETTINGS -->
+<div class="panel" id="panel-settings">
+  <div class="setting-row">
+    <div class="setting-info">
+      <div class="setting-title">Sync Storage</div>
+      <div class="setting-desc">Store data in your Google account so it syncs across devices. Note: sync has a 100KB limit.</div>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" id="syncToggle"/>
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+
+  <div class="setting-row">
+    <div class="setting-info">
+      <div class="setting-title">Version</div>
+      <div class="setting-desc">FocusLog v1.2.0</div>
+    </div>
+    <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted)">v1.2.0</span>
+  </div>
+
+  <button class="danger-btn" id="resetAll">⚠ Clear ALL Data</button>
+</div>
+
+<!-- MODAL 1: Hard mode warning -->
+<div id="modal1" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:none;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#151820;border:1px solid rgba(255,71,87,0.4);border-radius:10px;padding:22px 20px;max-width:340px;width:100%;box-shadow:0 0 40px rgba(255,71,87,0.15)">
+    <div style="font-size:28px;text-align:center;margin-bottom:10px">⚠️</div>
+    <div style="font-size:14px;font-weight:800;color:#ff4757;text-align:center;letter-spacing:.05em;margin-bottom:12px;text-transform:uppercase">Hard Mode Warning</div>
+    <p style="font-size:11px;color:#e8eaf0;line-height:1.7;margin-bottom:10px">
+      You are about to start a <strong style="color:#ff4757">Hard Mode</strong> focus session. Once started:
+    </p>
+    <ul style="font-size:11px;color:#e8eaf0;line-height:2;margin-bottom:12px;padding-left:16px">
+      <li>You <strong>cannot end the session early</strong> from the extension</li>
+      <li>The "End Session Early" button will be disabled</li>
+      <li>The session will run until the timer expires</li>
+    </ul>
+    <div style="background:rgba(255,165,2,0.08);border:1px solid rgba(255,165,2,0.3);border-radius:5px;padding:9px 11px;margin-bottom:16px">
+      <div style="font-size:10px;color:#ffa502;font-weight:700;margin-bottom:3px">⚡ Important</div>
+      <div style="font-size:10px;color:#e8eaf0;line-height:1.6">Uninstalling the extension will remove all blocks. Hard mode relies on your own commitment — it is not unbreakable.</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button id="modal1Cancel" style="flex:1;padding:9px;background:none;border:1px solid #1e2330;border-radius:5px;color:#555c72;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer">Cancel</button>
+      <button id="modal1Continue" style="flex:2;padding:9px;background:#ff4757;border:none;border-radius:5px;color:#fff;font-family:'Syne',sans-serif;font-size:11px;font-weight:800;letter-spacing:.05em;cursor:pointer">I Understand — Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 2: Final confirmation -->
+<div id="modal2" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#151820;border:1px solid rgba(255,71,87,0.5);border-radius:10px;padding:22px 20px;max-width:340px;width:100%;box-shadow:0 0 40px rgba(255,71,87,0.2)">
+    <div style="font-size:28px;text-align:center;margin-bottom:10px">🔒</div>
+    <div style="font-size:14px;font-weight:800;color:#ff4757;text-align:center;letter-spacing:.05em;margin-bottom:12px;text-transform:uppercase">Final Confirmation</div>
+    <p style="font-size:11px;color:#e8eaf0;line-height:1.7;margin-bottom:14px">
+      By clicking <strong style="color:#ff4757">"Lock It In"</strong> below, you agree to commit to your focus session for its full duration with no early exit from FocusLog.
+    </p>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:10px 12px;margin-bottom:16px;font-family:'Share Tech Mono',monospace;font-size:11px;color:#e8eaf0;line-height:1.8">
+      <div>⏱ Duration: <span id="modal2Duration" style="color:#00e5ff">--</span></div>
+      <div>🚫 Blocking: <span id="modal2Domains" style="color:#ff4757">--</span></div>
+      <div>🔒 Mode: <span style="color:#ff4757">Hard (no early exit)</span></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button id="modal2Cancel" style="flex:1;padding:9px;background:none;border:1px solid #1e2330;border-radius:5px;color:#555c72;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer">Go Back</button>
+      <button id="modal2Confirm" style="flex:2;padding:9px;background:#ff4757;border:none;border-radius:5px;color:#fff;font-family:'Syne',sans-serif;font-size:12px;font-weight:800;letter-spacing:.05em;cursor:pointer">🔒 Lock It In</button>
+    </div>
+  </div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
