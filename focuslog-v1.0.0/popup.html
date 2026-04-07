@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Distraction Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #151820;
+      --border: #1e2330;
+      --accent: #00e5ff;
+      --accent2: #ff4757;
+      --accent3: #ffa502;
+      --text: #e8eaf0;
+      --muted: #555c72;
+      --green: #2ed573;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 360px;
+      min-height: 440px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      overflow: hidden;
+    }
+
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.07) 2px,
+        rgba(0,0,0,0.07) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    header {
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(135deg, #0d0f14 0%, #111520 100%);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--accent); }
+      50% { opacity: 0.4; box-shadow: 0 0 2px var(--accent); }
+    }
+
+    .logo-text {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .date-display {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* Tab navigation */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 9px 0;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 20%;
+      right: 20%;
+      height: 2px;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+    }
+
+    /* Content area */
+    .panel { display: none; padding: 14px 16px; }
+    .panel.active { display: block; }
+
+    /* Today's summary bar */
+    .summary-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .summary-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .summary-value {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 20px;
+      color: var(--accent);
+      text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+    }
+
+    .summary-count {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* Site list */
+    .site-list { display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; }
+    .site-list::-webkit-scrollbar { width: 3px; }
+    .site-list::-webkit-scrollbar-track { background: transparent; }
+    .site-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .site-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideIn 0.2s ease both;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .site-rank {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      width: 16px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .site-info { flex: 1; min-width: 0; }
+
+    .site-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .site-bar-wrap {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-top: 5px;
+      overflow: hidden;
+    }
+
+    .site-bar {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    .site-time {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    /* Week panel */
+    .week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+
+    .day-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .day-label {
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .day-bar-wrap {
+      width: 100%;
+      height: 48px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      display: flex;
+      align-items: flex-end;
+      overflow: hidden;
+    }
+
+    .day-bar {
+      width: 100%;
+      border-radius: 3px 3px 0 0;
+      transition: height 0.5s ease;
+      min-height: 2px;
+    }
+
+    .day-total {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: var(--muted);
+    }
+
+    .day-cell.today .day-label { color: var(--accent); }
+    .day-cell.today .day-bar-wrap { border-color: var(--accent); }
+
+    /* Empty state */
+    .empty {
+      text-align: center;
+      padding: 30px 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.8;
+    }
+
+    .empty-icon { font-size: 28px; margin-bottom: 8px; }
+
+    /* Reset button */
+    .reset-btn {
+      width: 100%;
+      margin-top: 12px;
+      padding: 8px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--muted);
+      font-family: 'Syne', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .reset-btn:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    /* Blocked sites panel */
+    .block-input-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .block-input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 8px 10px;
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .block-input:focus { border-color: var(--accent); }
+    .block-input::placeholder { color: var(--muted); }
+
+    .add-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 5px;
+      padding: 8px 12px;
+      color: #000;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 11px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .add-btn:hover { opacity: 0.8; }
+
+    .blocked-list { display: flex; flex-direction: column; gap: 5px; max-height: 240px; overflow-y: auto; }
+
+    .blocked-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+    }
+
+    .blocked-domain { color: var(--accent2); }
+
+    .remove-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 2px;
+      transition: color 0.2s;
+    }
+
+    .remove-btn:hover { color: var(--accent2); }
+
+    .blocked-note {
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    <span class="logo-text">FocusLog</span>
+  </div>
+  <span class="date-display" id="dateDisplay"></span>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-panel="today">Today</button>
+  <button class="tab-btn" data-panel="week">Week</button>
+  <button class="tab-btn" data-panel="blocked">Watchlist</button>
+</div>
+
+<!-- TODAY PANEL -->
+<div class="panel active" id="panel-today">
+  <div class="summary-bar">
+    <div>
+      <div class="summary-label">Total Time Today</div>
+      <div class="summary-value" id="totalToday">0:00</div>
+    </div>
+    <div class="summary-count" id="siteCount">0 sites</div>
+  </div>
+  <div class="site-list" id="siteList"></div>
+  <button class="reset-btn" id="resetToday">⚠ Clear Today's Data</button>
+</div>
+
+<!-- WEEK PANEL -->
+<div class="panel" id="panel-week">
+  <div class="week-grid" id="weekGrid"></div>
+  <div class="site-list" id="weekSiteList"></div>
+</div>
+
+<!-- BLOCKED/WATCHLIST PANEL -->
+<div class="panel" id="panel-blocked">
+  <p class="blocked-note">Add sites to your watchlist — they'll be highlighted in red on the Today tab so you can see how much time you're spending on them.</p>
+  <div class="block-input-row">
+    <input class="block-input" id="blockInput" placeholder="youtube.com" type="text" />
+    <button class="add-btn" id="addBlockBtn">ADD</button>
+  </div>
+  <div class="blocked-list" id="blockedList"></div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
