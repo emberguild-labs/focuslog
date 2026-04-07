@@ -21,7 +21,7 @@ A lightweight Chrome extension that tracks how long you spend on each website â€
 
 ## Screenshots
 
-<img width="360" height="456" alt="image" src="https://github.com/user-attachments/assets/411c1e60-6199-44ba-adca-5443082aebcd" />
+> *(Add screenshots of the popup here)*
 
 ---
 
